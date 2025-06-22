@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <!-- Important for mobile responsiveness -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Earnings Calendar</title>
+  <style>
+    /* Reset box-sizing */
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f9f9f9;
+      color: #1d1d1f;
+      position: relative;
+      min-height: 100vh; 
+      overflow-x: hidden;
+    }
+    .container {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #ffffff;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      border-radius: 16px;
+      animation: fadeIn 1s ease-in-out;
+      position: relative; /* needed for absolutely-positioned buttons */
+      z-index: 0;
+    }
+
+    /* DAY / WEEK TOGGLE as absolute-positioned buttons */
+    #dayViewBtn, 
+    #weekViewBtn {
+      position: absolute;
+      top: 15px;
+      padding: 10px 20px;
+      font-size: 15px;
+      font-weight: 600;
+      background: #FFBD44;   /* your requested color */
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.3s;
+      z-index: 999;          
+    }
+    #dayViewBtn:hover,
+    #weekViewBtn:hover {
+      opacity: 0.8;
+    }
+    /* Day View button (top-left corner) */
+    #dayViewBtn {
+      left: 15px;
+    }
+    /* Week View button (top-right corner) */
+    #weekViewBtn {
+      right: 15px;
+    }
+
+    /* Title */
+    h1 {
+      text-align: center;
+      font-size: 2.5rem;
+      color: #1d1d1f;
+      margin-top: 60px; /* push down so buttons won't overlap title */
+      margin-bottom: 20px;
+    }
+
+    /* Calendar navigation (Prev/Next) + day buttons */
+    .calendar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      gap: 16px;
+    }
+    .calendar button {
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      color: #ffffff;
+      cursor: pointer;
+      transition: all 0.3s;
+      flex-shrink: 0;
+    }
+    .calendar button:hover {
+      opacity: 0.8;
+    }
+    .calendar button.prev {
+      background-color: #FF605C;
+    }
+    .calendar button.next {
+      background-color: #00CA4E;
+    }
+    .calendar-week {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      flex-grow: 1;
+      margin: 0 16px;
+      overflow: hidden; 
+    }
+    .calendar-week div {
+      flex: 1;
+      padding: 12px 8px;
+      text-align: center;
+      background: #f0f0f5;
+      border-radius: 12px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s;
+      white-space: pre-wrap; 
+    }
+    .calendar-week div:hover,
+    .calendar-week div.active {
+      background: #e0e0eb;
+      font-weight: bold;
+    }
+
+    /* DAY VIEW */
+    .day-view {
+      margin-top: 20px;
+    }
+    .day-view h2 {
+      text-align: center;
+      font-size: 1.8rem;
+      margin-bottom: 10px;
+    }
+    .symbol-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .symbol-list a {
+      text-decoration: none;
+      color: #007aff;
+      background: #f0f0f5;
+      padding: 6px 10px;
+      border-radius: 6px;
+      transition: background 0.3s;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .symbol-list a:hover {
+      background: #e0e0eb;
+    }
+    .stocks-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+      gap: 16px;
+      width: 100%;
+    }
+    .stock {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      margin: 0;
+      background: #f5f5f7;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s;
+      width: 100%;
+    }
+    .stock:hover {
+      transform: scale(1.03);
+    }
+    .stock img {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: #fff;
+      object-fit: cover;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      flex-shrink: 0;
+    }
+    .stock .details {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .stock .details span {
+      font-size: 14px;
+      color: #555;
+    }
+    .stock .symbol {
+      font-size: 16px;
+      font-weight: bold;
+    }
+    .market-icon {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      font-size: 20px;
+    }
+
+    /* WEEK VIEW */
+    .week-view {
+      display: none; /* hidden by default; toggled in code */
+      margin-top: 20px;
+    }
+    .weekly-container {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 16px;
+    }
+    .day-col {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: #f5f5f7;
+      border-radius: 12px;
+      padding: 8px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    .day-col h3 {
+      margin: 0 0 8px 0;
+      font-size: 1rem;
+      text-align: center;
+      font-weight: 600;
+      color: #333;
+    }
+    .week-stock-bubble {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 8px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    /* No images in week view bubbles anymore */
+    .week-symbol {
+      font-weight: 600;
+      color: #555;
+    }
+    .week-market-icon {
+      margin-left: auto;
+      font-size: 18px;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    /* Loading overlay */
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: none; 
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      background: rgba(255, 255, 255, 0.7);
+      z-index: 999;
+    }
+    .loading-overlay.active {
+      display: flex;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 6px solid #ccc;
+      border-top-color: #007aff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+    .loading-text {
+      margin-top: 12px;
+      font-size: 16px;
+      color: #007aff;
+      font-weight: 600;
+    }
+
+    /* MEDIA QUERIES FOR MOBILE */
+    @media (max-width: 600px) {
+      .container {
+        margin: 20px;
+        padding: 16px;
+      }
+      h1 {
+        font-size: 2rem;
+        margin-top: 80px; /* extra top space for buttons */
+      }
+      .calendar {
+        flex-direction: column; 
+        align-items: stretch;
+      }
+      .calendar button {
+        width: 100%;
+        font-size: 14px;
+      }
+      .calendar-week {
+        margin: 0;
+        gap: 4px;
+      }
+      .calendar-week div {
+        padding: 8px;
+        font-size: 13px;
+      }
+      .day-view h2 {
+        font-size: 1.5rem;
+      }
+      .stocks-container {
+        grid-template-columns: 1fr; /* single column on small screens */
+      }
+      .stock {
+        flex-direction: column; 
+        text-align: center;
+        gap: 8px;
+      }
+      .stock img {
+        margin: 0 auto;
+      }
+
+      .weekly-container {
+        grid-template-columns: 1fr;
+      }
+      .day-col {
+        margin-bottom: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+      <div class="spinner"></div>
+      <div class="loading-text">Loading...</div>
+    </div>
+
+    <!-- ABSOLUTE BUTTONS -->
+    <button id="dayViewBtn">Day View</button>
+    <button id="weekViewBtn">Week View</button>
+
+    <!-- TITLE -->
+    <h1>Earnings Calendar</h1>
+
+    <!-- Calendar Nav (Prev / Next) + Day Buttons -->
+    <div class="calendar">
+      <button id="prevWeek" class="prev">&larr; Previous Week</button>
+      <div class="calendar-week" id="calendarWeek"></div>
+      <button id="nextWeek" class="next">Next Week &rarr;</button>
+    </div>
+
+    <!-- DAY VIEW -->
+    <div class="day-view" id="dayView">
+      <h2 id="selectedDay">Loading...</h2>
+      <div class="symbol-list" id="symbolList"></div>
+      <div id="stocks" class="stocks-container"></div>
+    </div>
+
+    <!-- WEEK VIEW -->
+    <div class="week-view" id="weekView">
+      <div class="weekly-container" id="weeklyContainer"></div>
+    </div>
+  </div>
+
+  <script>
+    // Use your Finnhub API key
+    const apiKey = 'cu0c59pr01ql96gq8rrgcu0c59pr01ql96gq8rs0';
+
+    // Grab today's date
+    const today = new Date();
+
+    // If it's Saturday (6) or Sunday (0), move to the upcoming Monday
+    //   Saturday +2 => Monday
+    //   Sunday   +1 => Monday
+    if (today.getDay() === 6) {
+      today.setDate(today.getDate() + 2);
+    } else if (today.getDay() === 0) {
+      today.setDate(today.getDate() + 1);
+    }
+
+    // Date bounds (1 month before/after)
+    const maxDateBackward = new Date(today);
+    maxDateBackward.setMonth(maxDateBackward.getMonth() - 1);
+    const maxDateForward = new Date(today);
+    maxDateForward.setMonth(maxDateForward.getMonth() + 1);
+
+    let currentWeekStart = new Date(today);
+    let selectedDay = new Date(today);
+
+    let fetchId = 0;     // concurrency for day
+    let fetchWeekId = 0; // concurrency for week
+
+    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const monthsShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+                         "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    function showLoadingOverlay() {
+      document.getElementById('loadingOverlay').classList.add('active');
+    }
+    function hideLoadingOverlay() {
+      document.getElementById('loadingOverlay').classList.remove('active');
+    }
+
+    // Format YYYY-MM-DD
+    function formatDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    // For the day buttons (e.g. Monday <br> 01/10)
+    function formatDateForButton(date) {
+      const dayName = days[date.getDay()];
+      const dd = String(date.getDate()).padStart(2, '0');
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      return `${dayName}<br>${mm}/${dd}`;
+    }
+
+    // For the selected day heading (e.g. "Friday - Jan 10, 2025")
+    function formatDateForSelected(date) {
+      const dayName = days[date.getDay()];
+      const dd = date.getDate();
+      const mmShort = monthsShort[date.getMonth()];
+      const yyyy = date.getFullYear();
+      return `${dayName} - ${mmShort} ${dd}, ${yyyy}`;
+    }
+
+    // For week col headings: "Monday 01/10"
+    function formatDateForWeekHeader(date) {
+      const dayName = days[date.getDay()];
+      const dd = String(date.getDate()).padStart(2, '0');
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      return `${dayName} ${mm}/${dd}`;
+    }
+
+    // Get 5 weekdays (Mon-Fri)
+    function getWeekDates(startDate) {
+      startDate.setHours(0, 0, 0, 0);
+      while (startDate.getDay() === 0 || startDate.getDay() === 6) {
+        startDate.setDate(startDate.getDate() + 1);
+      }
+      while (startDate.getDay() !== 1) {
+        startDate.setDate(startDate.getDate() - 1);
+      }
+      const dates = [];
+      for (let i = 0; i < 5; i++) {
+        const date = new Date(startDate);
+        date.setDate(startDate.getDate() + i);
+        dates.push(date);
+      }
+      return dates;
+    }
+
+    // Show/hide day buttons
+    function setCalendarButtonsVisibility(showDayButtons) {
+      const calendarWeekDiv = document.getElementById('calendarWeek');
+      calendarWeekDiv.style.display = showDayButtons ? 'flex' : 'none';
+    }
+
+    // Render day buttons for day view
+    function renderCalendarWeek(dates) {
+      const calendarWeek = document.getElementById('calendarWeek');
+      calendarWeek.innerHTML = '';
+      dates.forEach((date) => {
+        const div = document.createElement('div');
+        div.innerHTML = formatDateForButton(date);
+        if (formatDate(date) === formatDate(selectedDay)) {
+          div.classList.add('active');
+        }
+        div.addEventListener('click', () => {
+          selectedDay = new Date(date);
+          renderCalendarWeek(dates);
+          fetchEarnings(selectedDay);
+        });
+        calendarWeek.appendChild(div);
+      });
+    }
+
+    // Fetch a single company profile
+    async function fetchCompanyProfile(symbol) {
+      try {
+        const response = await fetch(
+          `https://finnhub.io/api/v1/stock/profile2?symbol=${symbol}&token=${apiKey}`
+        );
+        if (!response.ok) {
+          throw new Error('Failed to fetch company profile');
+        }
+        return await response.json();
+      } catch (error) {
+        console.error('Error fetching company profile:', error);
+        return null;
+      }
+    }
+
+    // DAY VIEW
+    async function fetchEarnings(date) {
+      const myId = ++fetchId;
+      showLoadingOverlay();
+
+      const stocksContainer = document.getElementById('stocks');
+      const selectedDayHeader = document.getElementById('selectedDay');
+      const symbolList = document.getElementById('symbolList');
+      symbolList.innerHTML = '';
+      selectedDayHeader.textContent = formatDateForSelected(date);
+
+      try {
+        const response = await fetch(
+          `https://finnhub.io/api/v1/calendar/earnings?from=${formatDate(date)}&to=${formatDate(date)}&token=${apiKey}`
+        );
+        if (!response.ok) {
+          throw new Error('Failed to fetch data');
+        }
+        if (myId !== fetchId) return;
+
+        const data = await response.json();
+        const earnings = data.earningsCalendar || [];
+        stocksContainer.innerHTML = '';
+
+        if (earnings.length === 0) {
+          stocksContainer.innerHTML = '<p>No data available for the selected date.</p>';
+          return;
+        }
+
+        for (const earning of earnings) {
+          if (myId !== fetchId) return;
+          const symbolItem = document.createElement('a');
+          symbolItem.href = `#stock-${earning.symbol}`;
+          symbolItem.textContent = earning.symbol;
+          symbolList.appendChild(symbolItem);
+        }
+
+        for (const earning of earnings) {
+          if (myId !== fetchId) return;
+          const profile = await fetchCompanyProfile(earning.symbol);
+          if (myId !== fetchId) return;
+
+          let hourIcon = '';
+          const hour = earning.hour?.toLowerCase() || '';
+          if (hour === 'bmo') hourIcon = '☀';
+          else if (hour === 'amc') hourIcon = '🌙';
+
+          // Handle missing/broken logos with an onerror fallback
+          const imgSrc = profile?.logo || 'https://via.placeholder.com/50';
+
+          const stockDiv = document.createElement('div');
+          stockDiv.classList.add('stock');
+          stockDiv.id = `stock-${earning.symbol}`;
+
+          stockDiv.innerHTML = `
+            <img 
+              src="${imgSrc}" 
+              alt="${earning.symbol}"
+              onerror="this.onerror=null; this.src='https://via.placeholder.com/50';"
+            />
+            <div class="details">
+              <span class="symbol">
+                ${earning.symbol || 'N/A'} - ${profile?.name || 'N/A'}
+              </span>
+              <span>
+                ${profile?.description || ''}
+              </span>
+              <span>
+                <strong>Expected EPS:</strong> 
+                ${earning.epsEstimate ?? 'N/A'}
+              </span>
+              <span>
+                <strong>Expected Revenue:</strong> 
+                ${earning.revenueEstimate ?? 'N/A'}
+              </span>
+            </div>
+            ${hourIcon ? `<span class="market-icon">${hourIcon}</span>` : ''}
+          `;
+          stocksContainer.appendChild(stockDiv);
+        }
+      } catch (error) {
+        if (myId === fetchId) {
+          alert('Error fetching data: ' + error.message);
+        }
+      } finally {
+        if (myId === fetchId) {
+          hideLoadingOverlay();
+        }
+      }
+    }
+
+    // WEEK VIEW
+    async function fetchWeeklyEarnings() {
+      const myId = ++fetchWeekId;
+      showLoadingOverlay();
+
+      const weeklyContainer = document.getElementById('weeklyContainer');
+      weeklyContainer.innerHTML = '';
+
+      const weekDates = getWeekDates(new Date(currentWeekStart));
+      const fromDate = formatDate(weekDates[0]);
+      const toDate = formatDate(weekDates[4]);
+
+      // Create 5 columns
+      weekDates.forEach((d, i) => {
+        const colDiv = document.createElement('div');
+        colDiv.classList.add('day-col');
+        
+        const heading = document.createElement('h3');
+        heading.textContent = formatDateForWeekHeader(d);
+
+        colDiv.appendChild(heading);
+        colDiv.id = `weekCol${i}`;
+        weeklyContainer.appendChild(colDiv);
+      });
+
+      try {
+        const response = await fetch(
+          `https://finnhub.io/api/v1/calendar/earnings?from=${fromDate}&to=${toDate}&token=${apiKey}`
+        );
+        if (!response.ok) {
+          throw new Error('Failed to fetch weekly data');
+        }
+        if (myId !== fetchWeekId) return;
+
+        const data = await response.json();
+        const earnings = data.earningsCalendar || [];
+
+        // date => col index
+        const dateMap = {};
+        weekDates.forEach((d, i) => {
+          dateMap[formatDate(d)] = i;
+        });
+
+        for (const earning of earnings) {
+          if (myId !== fetchWeekId) return;
+          
+          const colIndex = dateMap[earning.date];
+          if (colIndex === undefined) continue;
+
+          let hourIcon = '';
+          const hour = earning.hour?.toLowerCase() || '';
+          if (hour === 'bmo') hourIcon = '☀';
+          else if (hour === 'amc') hourIcon = '🌙';
+          const div = document.createElement('div');
+          div.classList.add('week-stock-bubble');
+          div.dataset.symbol = earning.symbol; // Keep symbol in dataset for consistency
+          div.innerHTML = `
+            <span class="week-symbol">${earning.symbol}</span>
+            ${hourIcon ? `<span class="week-market-icon">${hourIcon}</span>` : ''}
+          `;
+
+          document.getElementById(`weekCol${colIndex}`).appendChild(div);
+        }
+      } catch (error) {
+        if (myId === fetchWeekId) {
+          alert('Error fetching weekly data: ' + error.message);
+        }
+      } finally {
+        if (myId === fetchWeekId) {
+          hideLoadingOverlay();
+        }
+      }
+    }
+
+    // Show/hide logic
+    function dayViewVisible() {
+      return document.getElementById('dayView').style.display !== 'none';
+    }
+    function weekViewVisible() {
+      return document.getElementById('weekView').style.display === 'block';
+    }
+
+    // Prev week
+    document.getElementById('prevWeek').addEventListener('click', () => {
+      const testDate = new Date(currentWeekStart);
+      testDate.setDate(testDate.getDate() - 7);
+      if (testDate < maxDateBackward) return;
+
+      currentWeekStart = testDate;
+      const weekDates = getWeekDates(currentWeekStart);
+      if (dayViewVisible()) {
+        setCalendarButtonsVisibility(true);
+        renderCalendarWeek(weekDates);
+        selectedDay = weekDates[0];
+        fetchEarnings(selectedDay);
+      }
+      if (weekViewVisible()) {
+        setCalendarButtonsVisibility(false);
+        fetchWeeklyEarnings();
+      }
+    });
+
+    // Next week
+    document.getElementById('nextWeek').addEventListener('click', () => {
+      const testDate = new Date(currentWeekStart);
+      testDate.setDate(testDate.getDate() + 7);
+      if (testDate > maxDateForward) return;
+
+      currentWeekStart = testDate;
+      const weekDates = getWeekDates(currentWeekStart);
+      if (dayViewVisible()) {
+        setCalendarButtonsVisibility(true);
+        renderCalendarWeek(weekDates);
+        selectedDay = weekDates[0];
+        fetchEarnings(selectedDay);
+      }
+      if (weekViewVisible()) {
+        setCalendarButtonsVisibility(false);
+        fetchWeeklyEarnings();
+      }
+    });
+
+    // Toggle Day View
+    document.getElementById('dayViewBtn').addEventListener('click', () => {
+      document.getElementById('dayView').style.display = 'block';
+      document.getElementById('weekView').style.display = 'none';
+      setCalendarButtonsVisibility(true);
+      fetchEarnings(selectedDay);
+    });
+
+    // Toggle Week View
+    document.getElementById('weekViewBtn').addEventListener('click', () => {
+      document.getElementById('dayView').style.display = 'none';
+      document.getElementById('weekView').style.display = 'block';
+      setCalendarButtonsVisibility(false);
+      fetchWeeklyEarnings();
+    });
+
+    // Initialize Day View by default
+    (function init() {
+      document.getElementById('dayView').style.display = 'block';
+      document.getElementById('weekView').style.display = 'none';
+      setCalendarButtonsVisibility(true);
+
+      const initialWeekDates = getWeekDates(currentWeekStart);
+      renderCalendarWeek(initialWeekDates);
+      fetchEarnings(selectedDay);
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Earnings Calendar</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+      <div class="spinner"></div>
+      <div class="loading-text">Loading...</div>
+    </div>
+
+    <!-- ABSOLUTE BUTTONS -->
+    <button id="dayViewBtn">Day View</button>
+    <button id="weekViewBtn">Week View</button>
+
+    <!-- TITLE -->
+    <h1>Earnings Calendar</h1>
+
+    <!-- Calendar Nav (Prev / Next) + Day Buttons -->
+    <div class="calendar">
+      <button id="prevWeek" class="prev">&larr; Previous Week</button>
+      <div class="calendar-week" id="calendarWeek"></div>
+      <button id="nextWeek" class="next">Next Week &rarr;</button>
+    </div>
+
+    <!-- DAY VIEW -->
+    <div class="day-view" id="dayView">
+      <h2 id="selectedDay">Loading...</h2>
+      <div class="symbol-list" id="symbolList"></div>
+      <div id="stocks" class="stocks-container"></div>
+    </div>
+
+    <!-- WEEK VIEW -->
+    <div class="week-view" id="weekView">
+      <div class="weekly-container" id="weeklyContainer"></div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/views.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

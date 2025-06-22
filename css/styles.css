@@ -1,0 +1,431 @@
+/* Reset box-sizing */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f9f9f9;
+  color: #1d1d1f;
+  position: relative;
+  min-height: 100vh; 
+  overflow-x: hidden;
+}
+
+.container {
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 20px;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  animation: fadeIn 1s ease-in-out;
+  position: relative; /* needed for absolutely-positioned buttons */
+  z-index: 0;
+}
+
+/* DAY / WEEK TOGGLE as absolute-positioned buttons */
+#dayViewBtn, 
+#weekViewBtn {
+  position: absolute;
+  top: 15px;
+  padding: 10px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  background: #FFBD44;   /* your requested color */
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s;
+  z-index: 999;          
+}
+#dayViewBtn:hover,
+#weekViewBtn:hover {
+  opacity: 0.8;
+}
+/* Day View button (top-left corner) */
+#dayViewBtn {
+  left: 15px;
+}
+/* Week View button (top-right corner) */
+#weekViewBtn {
+  right: 15px;
+}
+
+/* Title */
+h1 {
+  text-align: center;
+  font-size: 2.5rem;
+  color: #1d1d1f;
+  margin-top: 60px; /* push down so buttons won't overlap title */
+  margin-bottom: 20px;
+}
+
+/* Calendar navigation (Prev/Next) + day buttons */
+.calendar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  gap: 16px;
+}
+.calendar button {
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.3s;
+  flex-shrink: 0;
+}
+.calendar button:hover {
+  opacity: 0.8;
+}
+.calendar button.prev {
+  background-color: #FF605C;
+}
+.calendar button.next {
+  background-color: #00CA4E;
+}
+.calendar-week {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-grow: 1;
+  margin: 0 16px;
+  overflow: hidden; 
+}
+.calendar-week div {
+  flex: 1;
+  padding: 12px 8px;
+  text-align: center;
+  background: #f0f0f5;
+  border-radius: 12px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: pre-wrap; 
+}
+.calendar-week div:hover,
+.calendar-week div.active {
+  background: #e0e0eb;
+  font-weight: bold;
+}
+
+/* DAY VIEW */
+.day-view {
+  margin-top: 20px;
+}
+.day-view h2 {
+  text-align: center;
+  font-size: 1.8rem;
+  margin-bottom: 10px;
+}
+.symbol-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.symbol-list a {
+  text-decoration: none;
+  color: #007aff;
+  background: #f0f0f5;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: background 0.3s;
+  font-size: 14px;
+  font-weight: 500;
+}
+.symbol-list a:hover {
+  background: #e0e0eb;
+}
+.stocks-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+.stock {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  margin: 0;
+  background: #f5f5f7;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s;
+  width: 100%;
+}
+.stock:hover {
+  transform: scale(1.03);
+}
+.stock img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #fff;
+  object-fit: cover;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+}
+.stock .details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.stock .details span {
+  font-size: 14px;
+  color: #555;
+}
+.stock .symbol {
+  font-size: 16px;
+  font-weight: bold;
+}
+.market-icon {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 20px;
+}
+
+/* WEEK VIEW */
+.week-view {
+  display: none; /* hidden by default; toggled in code */
+  margin-top: 20px;
+}
+.weekly-container {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+}
+.day-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #f5f5f7;
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+.day-col h3 {
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+  text-align: center;
+  font-weight: 600;
+  color: #333;
+}
+.week-stock-bubble {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 5px 0;
+  padding: 8px 12px;
+  border-radius: 5px;
+  background-color: #f5f5f5;
+  transition: background-color 0.2s;
+  cursor: pointer;
+  position: relative;
+}
+
+.week-stock-bubble:hover {
+  background-color: #e8e8e8;
+}
+
+.week-symbol {
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+/* Loading state for images */
+.loading-image {
+  opacity: 0.6;
+  filter: grayscale(0.5);
+}
+
+/* Status message for image loading */
+.image-loading-status {
+  text-align: center;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 5px;
+  margin-top: 15px;
+  color: #666;
+  font-size: 0.9rem;
+  font-style: italic;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Progress indicator styles */
+.batch-progress-indicator {
+  width: 90%;
+  margin: 15px auto;
+  padding: 10px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.batch-progress-indicator.complete {
+  background-color: #e6f7e6;
+}
+
+.batch-progress-indicator.fade-out {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.progress-bar {
+  height: 12px;
+  background-color: #eee;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: #4CAF50;
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 14px;
+  color: #555;
+  text-align: center;
+}
+
+.loading-image img {
+  opacity: 0.6;
+}
+
+.week-stock-bubble.loading-image {
+  position: relative;
+}
+
+.week-stock-bubble.loading-image::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 20px;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  border: 3px solid #ccc;
+  border-top-color: #007aff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+.week-symbol {
+  font-weight: 600;
+  color: #555;
+}
+.week-market-icon {
+  margin-left: auto;
+  font-size: 18px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Loading overlay */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: none; 
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.7);
+  z-index: 999;
+}
+.loading-overlay.active {
+  display: flex;
+}
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 6px solid #ccc;
+  border-top-color: #007aff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.loading-text {
+  margin-top: 12px;
+  font-size: 16px;
+  color: #007aff;
+  font-weight: 600;
+}
+
+/* MEDIA QUERIES FOR MOBILE */
+@media (max-width: 600px) {
+  .container {
+    margin: 20px;
+    padding: 16px;
+  }
+  h1 {
+    font-size: 2rem;
+    margin-top: 80px; /* extra top space for buttons */
+  }
+  .calendar {
+    flex-direction: column; 
+    align-items: stretch;
+  }
+  .calendar button {
+    width: 100%;
+    font-size: 14px;
+  }
+  .calendar-week {
+    margin: 0;
+    gap: 4px;
+  }
+  .calendar-week div {
+    padding: 8px;
+    font-size: 13px;
+  }
+  .day-view h2 {
+    font-size: 1.5rem;
+  }
+  .stocks-container {
+    grid-template-columns: 1fr; /* single column on small screens */
+  }
+  .stock {
+    flex-direction: column; 
+    text-align: center;
+    gap: 8px;
+  }
+  .stock img {
+    margin: 0 auto;
+  }
+
+  .weekly-container {
+    grid-template-columns: 1fr;
+  }
+  .day-col {
+    margin-bottom: 16px;
+  }
+}
