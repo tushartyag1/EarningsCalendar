@@ -1,276 +1,182 @@
-/**
- * API functions for the Earnings Calendar app
- */
-const API = {
-  // Cache for company profiles to avoid repeated API calls
-  profileCache: {},
-  
-  // Batch processing and rate limiting configuration
-  batchSize: 5,             // Process profiles in smaller batches of 5 (less likely to hit rate limits)
-  batchDelayMs: 6000,       // 6 seconds between batches (allowing ~50 requests/minute)
-  requestQueue: [],         // Queue for individual API requests
-  batchQueue: [],           // Queue for batches of symbols
-  isProcessingQueue: false, // Flag for processing individual requests
-  isProcessingBatch: false, // Flag for processing batches
-  currentBatchPromises: [], // Promises for the current batch
-  processedSymbols: 0,      // Counter for monitoring processed symbols
-  totalSymbols: 0,          // Total symbols to process in current job
-  
-  /**
-   * Fetches company profiles in batches to respect the Finnhub API rate limit of 60 calls/minute
-   * @param {Array} symbols - Array of stock symbols
-   * @returns {Promise} Promise that resolves when all batches have been processed
-   */
-  fetchProfilesInBatches(symbols) {
-    // Reset counters for monitoring
-    this.processedSymbols = 0;
-    this.totalSymbols = symbols.length;
-    
-    // Filter out symbols that are already in the cache
-    const symbolsToFetch = symbols.filter(symbol => !this.profileCache[symbol]);
-    
-    if (symbolsToFetch.length === 0) {
-      return Promise.resolve([]);
+// API functions for fetching data
+
+// Fetch a single company profile
+async function fetchCompanyProfile(symbol) {
+  try {
+    const response = await fetch(
+      `https://finnhub.io/api/v1/stock/profile2?symbol=${symbol}&token=${apiKey}`
+    );
+    if (!response.ok) {
+      throw new Error('Failed to fetch company profile');
     }
-    
-    // Split symbols into batches
-    const batches = [];
-    for (let i = 0; i < symbolsToFetch.length; i += this.batchSize) {
-      batches.push(symbolsToFetch.slice(i, i + this.batchSize));
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching company profile:', error);
+    return null;
+  }
+}
+
+// Fetch earnings for a specific day
+async function fetchEarnings(date) {
+  const myId = ++fetchId;
+  showLoadingOverlay();
+
+  const stocksContainer = document.getElementById('stocks');
+  const selectedDayHeader = document.getElementById('selectedDay');
+  const symbolList = document.getElementById('symbolList');
+  symbolList.innerHTML = '';
+  selectedDayHeader.textContent = formatDateForSelected(date);
+
+  try {
+    const response = await fetch(
+      `https://finnhub.io/api/v1/calendar/earnings?from=${formatDate(date)}&to=${formatDate(date)}&token=${apiKey}`
+    );
+    if (!response.ok) {
+      throw new Error('Failed to fetch data');
     }
-    
-    console.log(`Splitting ${symbolsToFetch.length} profiles into ${batches.length} batches of ${this.batchSize}`);
-    
-    // Clear any existing queue and add new batches
-    this.batchQueue = [];
-    this.batchQueue.push(...batches);
-    
-    // Create a deferred promise that will resolve when all batches are processed
-    const deferred = {};
-    const promise = new Promise((resolve, reject) => {
-      deferred.resolve = resolve;
-      deferred.reject = reject;
-    });
-    
-    // Store the deferred promise for resolution when all batches complete
-    this._currentBatchingJob = {
-      deferred,
-      totalBatches: batches.length,
-      processedBatches: 0,
-      symbols
-    };
-    
-    // Start processing batches if not already processing
-    if (!this.isProcessingBatch) {
-      this.processBatchQueue();
-    }
-    
-    return promise;
-  },
-  
-  /**
-   * Process batches of symbols with a delay between each batch
-   */
-  async processBatchQueue() {
-    if (this.batchQueue.length === 0 || this.isProcessingBatch) {
-      // All batches completed, resolve the main promise
-      if (this._currentBatchingJob && this.batchQueue.length === 0) {
-        this._currentBatchingJob.deferred.resolve(this._currentBatchingJob.symbols);
-      }
+    if (myId !== fetchId) return;
+
+    const data = await response.json();
+    const earnings = data.earningsCalendar || [];
+    stocksContainer.innerHTML = '';
+
+    if (earnings.length === 0) {
+      stocksContainer.innerHTML = '<p>No data available for the selected date.</p>';
       return;
     }
-    
-    this.isProcessingBatch = true;
-    
-    try {
-      const batch = this.batchQueue.shift();
-      console.log(`Processing batch ${this._currentBatchingJob?.processedBatches + 1} of ${this._currentBatchingJob?.totalBatches}: ${batch.length} symbols`);
-      
-      // Process this batch with individual Promise handling
-      const promises = batch.map(symbol => {
-        return this.fetchCompanyProfile(symbol)
-          .then(result => {
-            // Track each successful symbol
-            this.processedSymbols++;
-            return result;
-          })
-          .catch(err => {
-            console.error(`Failed to fetch profile for ${symbol}:`, err);
-            this.processedSymbols++;
-            // Store the error in cache so we don't retry failed symbols
-            this.profileCache[symbol] = { error: true };
-            return { error: true };
-          });
-      });
-      
-      // Wait for all promises to settle
-      await Promise.allSettled(promises);
-      
-      // Increment batch counter
-      if (this._currentBatchingJob) {
-        this._currentBatchingJob.processedBatches++;
-      }
-      
-      // Update progress for views
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('api-batch-progress', {
-          detail: {
-            processedSymbols: this.processedSymbols,
-            totalSymbols: this.totalSymbols,
-            remainingBatches: this.batchQueue.length
-          }
-        }));
-      }
-      
-      // If there are more batches, schedule processing with delay
-      if (this.batchQueue.length > 0) {
-        console.log(`Waiting ${this.batchDelayMs/1000} seconds before processing next batch. ${this.batchQueue.length} batches remaining.`);
-        setTimeout(() => {
-          this.isProcessingBatch = false;
-          this.processBatchQueue();
-        }, this.batchDelayMs);
-      } else {
-        console.log(`All batches processed. Total symbols processed: ${this.processedSymbols}/${this.totalSymbols}`);
-        this.isProcessingBatch = false;
-        
-        // Call processBatchQueue again to handle promise resolution
-        this.processBatchQueue();
-      }
-    } catch (error) {
-      console.error('Error processing batch:', error);
-      this.isProcessingBatch = false;
-      
-      // Don't stop on errors, continue with next batch
-      setTimeout(() => {
-        this.processBatchQueue();
-      }, this.batchDelayMs);
-    }
-  },
-  
-  /**
-   * Processes the next request in the queue with rate limiting.
-   */
-  async processQueue() {
-    if (this.isProcessingQueue || this.requestQueue.length === 0) {
-      return;
-    }
-    this.isProcessingQueue = true;
-    
-    const { url, symbol, resolve, reject } = this.requestQueue.shift();
-    
-    try {
-      const response = await fetch(url);
-      
-      // Handle rate limit error specifically
-      if (response.status === 429) {
-        console.warn('Rate limit hit. Re-queuing and pausing.');
-        // Put it back at the front of the queue
-        this.requestQueue.unshift({ url, symbol, resolve, reject });
-        // Wait for a longer period before trying again
-        setTimeout(() => {
-          this.isProcessingQueue = false;
-          this.processQueue();
-        }, 5000); // Wait 5 seconds
-        return;
-      }
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch profile for ${symbol}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      
-      // A valid but empty response means the symbol is not found
-      if (Object.keys(data).length === 0) {
-        console.warn(`No data found for symbol: ${symbol}`);
-        this.profileCache[symbol] = { notFound: true }; // Cache not-found result
-        resolve(this.profileCache[symbol]);
-      } else {
-        this.profileCache[symbol] = data;
-        resolve(data);
-      }
+    for (const earning of earnings) {
+      if (myId !== fetchId) return;
+      const symbolItem = document.createElement('a');
+      symbolItem.href = `#stock-${earning.symbol}`;
+      symbolItem.textContent = earning.symbol;
+      symbolList.appendChild(symbolItem);
+    }
 
-    } catch (error) {
-      console.error(`Error fetching profile for ${symbol}:`, error);
-      this.profileCache[symbol] = { error: true }; // Cache error result
-      reject(error);
-    } finally {
-      // Process the next item after a delay to respect rate limits
-      setTimeout(() => {
-        this.isProcessingQueue = false;
-        this.processQueue();
-      }, 1000); // Delay of 1s between individual requests
-    }
-  },
+    for (const earning of earnings) {
+      if (myId !== fetchId) return;
+      const profile = await fetchCompanyProfile(earning.symbol);
+      if (myId !== fetchId) return;
 
-  /**
-   * Get a profile from cache or queue it for fetching
-   * @param {string} symbol - Stock symbol
-   * @returns {Promise} Promise resolving to company profile data
-   */
-  getOrQueueProfile(symbol) {
-    // Return from cache if available
-    if (this.profileCache[symbol]) {
-      return Promise.resolve(this.profileCache[symbol]);
+      let hourIcon = '';
+      const hour = earning.hour?.toLowerCase() || '';
+      if (hour === 'bmo') hourIcon = '☀';
+      else if (hour === 'amc') hourIcon = '🌙';
+
+      // Handle missing/broken logos with an onerror fallback
+      const imgSrc = profile?.logo || 'https://via.placeholder.com/50';
+
+      const stockDiv = document.createElement('div');
+      stockDiv.classList.add('stock');
+      stockDiv.id = `stock-${earning.symbol}`;
+
+      stockDiv.innerHTML = `
+        <img 
+          src="${imgSrc}" 
+          alt="${earning.symbol}"
+          onerror="this.onerror=null; this.src='https://via.placeholder.com/50';"
+        />
+        <div class="details">
+          <span class="symbol">
+            ${earning.symbol || 'N/A'} - ${profile?.name || 'N/A'}
+          </span>
+          <span>
+            ${profile?.description || ''}
+          </span>
+          <span>
+            <strong>Expected EPS:</strong> 
+            ${earning.epsEstimate ?? 'N/A'}
+          </span>
+          <span>
+            <strong>Expected Revenue:</strong> 
+            ${earning.revenueEstimate ?? 'N/A'}
+          </span>
+        </div>
+        ${hourIcon ? `<span class="market-icon">${hourIcon}</span>` : ''}
+      `;
+      stocksContainer.appendChild(stockDiv);
     }
-    
-    return new Promise((resolve, reject) => {
-      const url = `https://finnhub.io/api/v1/stock/profile2?symbol=${symbol}&token=${CONFIG.API_KEY}`;
-      this.requestQueue.push({ url, symbol, resolve, reject });
-      this.processQueue();
-    });
-  },
-  
-  /**
-   * Fetch company profile data
-   * @param {string} symbol - Stock symbol
-   * @returns {Promise} Promise resolving to company profile data
-   */
-  fetchCompanyProfile(symbol) {
-    return this.getOrQueueProfile(symbol);
-  },
-  
-  /**
-   * Fetch earnings data for a specific date
-   * @param {Date} date - Date to fetch earnings for
-   * @returns {Promise} Promise resolving to earnings data
-   */
-  async fetchDailyEarnings(date) {
-    try {
-      const formattedDate = Utils.formatDate(date);
-      const response = await fetch(
-        `https://finnhub.io/api/v1/calendar/earnings?from=${formattedDate}&to=${formattedDate}&token=${CONFIG.API_KEY}`
-      );
-      if (!response.ok) {
-        throw new Error('Failed to fetch daily earnings data');
-      }
-      return await response.json();
-    } catch (error) {
-      console.error('Error fetching daily earnings:', error);
-      throw error;
+  } catch (error) {
+    if (myId === fetchId) {
+      alert('Error fetching data: ' + error.message);
     }
-  },
-  
-  /**
-   * Fetch earnings data for a week
-   * @param {Date} fromDate - Start date
-   * @param {Date} toDate - End date
-   * @returns {Promise} Promise resolving to earnings data
-   */
-  async fetchWeeklyEarnings(fromDate, toDate) {
-    try {
-      const formattedFromDate = Utils.formatDate(fromDate);
-      const formattedToDate = Utils.formatDate(toDate);
-      const response = await fetch(
-        `https://finnhub.io/api/v1/calendar/earnings?from=${formattedFromDate}&to=${formattedToDate}&token=${CONFIG.API_KEY}`
-      );
-      if (!response.ok) {
-        throw new Error('Failed to fetch weekly earnings data');
-      }
-      return await response.json();
-    } catch (error) {
-      console.error('Error fetching weekly earnings:', error);
-      throw error;
+  } finally {
+    if (myId === fetchId) {
+      hideLoadingOverlay();
     }
   }
-};
+}
+
+// Fetch earnings for an entire week
+async function fetchWeeklyEarnings() {
+  const myId = ++fetchWeekId;
+  showLoadingOverlay();
+
+  const weeklyContainer = document.getElementById('weeklyContainer');
+  weeklyContainer.innerHTML = '';
+
+  const weekDates = getWeekDates(new Date(currentWeekStart));
+  const fromDate = formatDate(weekDates[0]);
+  const toDate = formatDate(weekDates[4]);
+
+  // Create 5 columns
+  weekDates.forEach((d, i) => {
+    const colDiv = document.createElement('div');
+    colDiv.classList.add('day-col');
+    
+    const heading = document.createElement('h3');
+    heading.textContent = formatDateForWeekHeader(d);
+
+    colDiv.appendChild(heading);
+    colDiv.id = `weekCol${i}`;
+    weeklyContainer.appendChild(colDiv);
+  });
+
+  try {
+    const response = await fetch(
+      `https://finnhub.io/api/v1/calendar/earnings?from=${fromDate}&to=${toDate}&token=${apiKey}`
+    );
+    if (!response.ok) {
+      throw new Error('Failed to fetch weekly data');
+    }
+    if (myId !== fetchWeekId) return;
+
+    const data = await response.json();
+    const earnings = data.earningsCalendar || [];
+
+    // date => col index
+    const dateMap = {};
+    weekDates.forEach((d, i) => {
+      dateMap[formatDate(d)] = i;
+    });
+
+    for (const earning of earnings) {
+      if (myId !== fetchWeekId) return;
+      
+      const colIndex = dateMap[earning.date];
+      if (colIndex === undefined) continue;
+
+      let hourIcon = '';
+      const hour = earning.hour?.toLowerCase() || '';
+      if (hour === 'bmo') hourIcon = '☀';
+      else if (hour === 'amc') hourIcon = '🌙';
+      const div = document.createElement('div');
+      div.classList.add('week-stock-bubble');
+      div.dataset.symbol = earning.symbol; // Keep symbol in dataset for consistency
+      div.innerHTML = `
+        <span class="week-symbol">${earning.symbol}</span>
+        ${hourIcon ? `<span class="week-market-icon">${hourIcon}</span>` : ''}
+      `;
+
+      document.getElementById(`weekCol${colIndex}`).appendChild(div);
+    }
+  } catch (error) {
+    if (myId === fetchWeekId) {
+      alert('Error fetching weekly data: ' + error.message);
+    }
+  } finally {
+    if (myId === fetchWeekId) {
+      hideLoadingOverlay();
+    }
+  }
+}
