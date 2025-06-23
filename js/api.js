@@ -41,7 +41,7 @@ async function fetchEarnings(date) {
     stocksContainer.innerHTML = '';
 
     if (earnings.length === 0) {
-      stocksContainer.innerHTML = '<p>No data available for the selected date.</p>';
+      stocksContainer.innerHTML = '<p>No earnings today:(</p>';
       return;
     }
 
