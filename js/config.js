@@ -3,7 +3,6 @@ const apiKey = 'cu0c59pr01ql96gq8rrgcu0c59pr01ql96gq8rs0';
 
 // Grab today's date
 const today = new Date();
-today.setDate(today.getDate() - 1);
 
 // Date bounds (1 month before/after)
 const maxDateBackward = new Date(today);
