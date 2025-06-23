@@ -1,6 +1,12 @@
 // API key and configuration
 const apiKey = 'cu0c59pr01ql96gq8rrgcu0c59pr01ql96gq8rs0';
 
+// Theme settings
+const THEME_KEY = 'earnings_calendar_theme';
+const DARK_THEME = 'dark-theme';
+const LIGHT_THEME = 'light';
+let currentTheme = localStorage.getItem(THEME_KEY) || LIGHT_THEME;
+
 // Grab today's date
 const today = new Date();
 

@@ -1,5 +1,32 @@
 // Event listeners and initialization
 
+// Theme toggle functionality
+document.getElementById('themeToggle').addEventListener('change', function() {
+  if (this.checked) {
+    document.body.classList.add(DARK_THEME);
+    localStorage.setItem(THEME_KEY, DARK_THEME);
+    currentTheme = DARK_THEME;
+  } else {
+    document.body.classList.remove(DARK_THEME);
+    localStorage.setItem(THEME_KEY, LIGHT_THEME);
+    currentTheme = LIGHT_THEME;
+  }
+});
+
+// Initialize theme based on saved preference or default to dark theme
+function initializeTheme() {
+  // If no theme is saved, or if the saved theme is not dark, default to dark mode
+  if (!localStorage.getItem(THEME_KEY) || currentTheme !== DARK_THEME) {
+    document.body.classList.add(DARK_THEME);
+    document.getElementById('themeToggle').checked = true;
+    localStorage.setItem(THEME_KEY, DARK_THEME);
+    currentTheme = DARK_THEME;
+  } else if (currentTheme === DARK_THEME) {
+    document.body.classList.add(DARK_THEME);
+    document.getElementById('themeToggle').checked = true;
+  }
+}
+
 // Prev week button
 document.getElementById('prevWeek').addEventListener('click', () => {
   const testDate = new Date(currentWeekStart);
@@ -65,4 +92,7 @@ document.getElementById('weekViewBtn').addEventListener('click', () => {
   const initialWeekDates = getWeekDates(currentWeekStart);
   renderCalendarWeek(initialWeekDates);
   fetchEarnings(selectedDay);
+  
+  // Apply saved theme preference
+  initializeTheme();
 })();

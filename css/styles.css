@@ -2,12 +2,40 @@
 * {
   box-sizing: border-box;
 }
+
+:root {
+  --bg-color: #f9f9f9;
+  --text-color: #1d1d1f;
+  --container-bg: #ffffff;
+  --card-bg: #f5f5f7;
+  --symbol-bg: #f0f0f5;
+  --symbol-hover: #e0e0eb;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --heading-color: #1d1d1f;
+  --button-text: #ffffff;
+  --loading-overlay: rgba(255, 255, 255, 0.7);
+  --transition-speed: 0.3s;
+}
+
+body.dark-theme {
+  --bg-color: #121212;
+  --text-color: #e0e0e0;
+  --container-bg: #1e1e1e;
+  --card-bg: #2d2d2d;
+  --symbol-bg: #333333;
+  --symbol-hover: #444444;
+  --shadow-color: rgba(0, 0, 0, 0.3);
+  --heading-color: #ffffff;
+  --button-text: #ffffff;
+  --loading-overlay: rgba(30, 30, 30, 0.7);
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   margin: 0;
   padding: 0;
-  background-color: #f9f9f9;
-  color: #1d1d1f;
+  background-color: var(--bg-color);
+  color: var(--text-color);
   position: relative;
   min-height: 100vh; 
   overflow-x: hidden;
@@ -22,6 +50,8 @@ body {
   animation: fadeIn 1s ease-in-out;
   position: relative; /* needed for absolutely-positioned buttons */
   z-index: 0;
+  background: var(--container-bg);
+  transition: background-color var(--transition-speed), box-shadow var(--transition-speed);
 }
 
 /* DAY / WEEK TOGGLE as absolute-positioned buttons */
@@ -57,7 +87,7 @@ body {
 h1 {
   text-align: center;
   font-size: 2.5rem;
-  color: #1d1d1f;
+  color: var(--heading-color);
   margin-top: 60px; /* push down so buttons won't overlap title */
   margin-bottom: 20px;
 }
@@ -102,7 +132,7 @@ h1 {
   flex: 1;
   padding: 12px 8px;
   text-align: center;
-  background: #f0f0f5;
+  background: var(--symbol-bg);
   border-radius: 12px;
   font-size: 14px;
   cursor: pointer;
@@ -111,7 +141,7 @@ h1 {
 }
 .calendar-week div:hover,
 .calendar-week div.active {
-  background: #e0e0eb;
+  background: var(--symbol-hover);
   font-weight: bold;
 }
 
@@ -134,7 +164,7 @@ h1 {
 .symbol-list a {
   text-decoration: none;
   color: #007aff;
-  background: #f0f0f5;
+  background: var(--symbol-bg);
   padding: 6px 10px;
   border-radius: 6px;
   transition: background 0.3s;
@@ -142,7 +172,7 @@ h1 {
   font-weight: 500;
 }
 .symbol-list a:hover {
-  background: #e0e0eb;
+  background: var(--symbol-hover);
 }
 .stocks-container {
   display: grid;
@@ -157,7 +187,7 @@ h1 {
   gap: 16px;
   padding: 16px;
   margin: 0;
-  background: #f5f5f7;
+  background: var(--card-bg);
   border-radius: 12px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s;
@@ -209,7 +239,7 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  background: #f5f5f7;
+  background: var(--card-bg);
   border-radius: 12px;
   padding: 8px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
@@ -219,13 +249,13 @@ h1 {
   font-size: 1rem;
   text-align: center;
   font-weight: 600;
-  color: #333;
+  color: var(--heading-color);
 }
 .week-stock-bubble {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #ffffff;
+  background: var(--container-bg);
   border-radius: 8px;
   padding: 8px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
@@ -260,7 +290,7 @@ h1 {
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--loading-overlay);
   z-index: 999;
 }
 .loading-overlay.active {
@@ -286,6 +316,62 @@ h1 {
   font-weight: 600;
 }
 
+/* Theme toggle switch */
+.theme-toggle-wrapper {
+  position: absolute;
+  top: 15px;
+  left: 50%;
+  transform: translateX(-50%); /* Center the toggle */
+  z-index: 999;
+}
+
+.theme-toggle {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+  cursor: pointer;
+}
+
+.theme-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-track {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #e9e9e9;
+  border-radius: 34px;
+  transition: var(--transition-speed);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-thumb {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  border-radius: 50%;
+  transition: var(--transition-speed);
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1);
+}
+
+.theme-toggle input:checked + .toggle-track {
+  background-color: #3498db;
+}
+
+.theme-toggle input:checked + .toggle-track .toggle-thumb {
+  transform: translateX(26px);
+}
+
 /* MEDIA QUERIES FOR MOBILE */
 @media (max-width: 600px) {
   .container {
@@ -295,6 +381,12 @@ h1 {
   h1 {
     font-size: 2rem;
     margin-top: 80px; /* extra top space for buttons */
+  }
+  
+  .theme-toggle-wrapper {
+    top: 55px;
+    left: 50%;
+    transform: translateX(-50%);
   }
   .calendar {
     flex-direction: column; 
